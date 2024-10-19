@@ -1,6 +1,7 @@
 ## Клеймер токенов MOVE
 
-Сайт крана: https://faucet.movementlabs.xyz/
+Сайт крана: <a href="https://faucet.movementlabs.xyz/" target="_blank">КЛИК</a>
+
 
 ### Пример файла .env
 
