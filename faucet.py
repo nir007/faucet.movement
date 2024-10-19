@@ -1,5 +1,4 @@
 import http.client
-from Demos.win32ts_logoff_disconnected import session
 from aiohttp import ClientSession
 from captcha import RecaptchaV2Solver
 
@@ -47,15 +46,15 @@ class MovementFaucet:
             "params": [address]
         }
 
-        response = session.post(
+        async with self.__session.request(
+            method="POST",
             url=self.__faucet_url,
             json=payload,
             headers={
                 "Token": token
             }
-        )
-
-        if response.status_code != http.client.OK:
-            raise RuntimeError(f"Bad response from faucet: {response.status_code}")
+        ) as response:
+            if response.status != http.client.OK:
+                raise RuntimeError(f"Bad response from faucet: {response.status}")
 
         return True
