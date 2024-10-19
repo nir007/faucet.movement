@@ -3,7 +3,7 @@ import http.client
 
 from aiohttp import ClientSession
 
-class RecaptchaV2Solver():
+class RecaptchaV2Solver:
     __base_api_url = "https://api.capmonster.cloud"
     __pay_url = "https://capmonster.cloud/SelectPaymentType"
     __create_task_path = "/createTask"
@@ -24,13 +24,11 @@ class RecaptchaV2Solver():
     def make_url(base: str, path: str):
         return f"{base}{path}"
 
-    async def __make_request(self, *, method: str = "GET", url: str, body: {}):
+    async def __make_request(self, *, method: str = "GET", url: str, headers: {},  body: {}):
         async with self.__session.request(
                 method=method,
                 url=url,
-                headers={
-                    "Content-Type": "application/json; charset=utf-8"
-                },
+                headers=headers,
                 json=body
         ) as response:
             if response.status in (http.client.OK, http.client.CREATED):
@@ -39,6 +37,8 @@ class RecaptchaV2Solver():
             return None, response.status
 
     async def create_captcha_task(self) -> str | None:
+        print(f"Start creating task for captcha")
+
         payload = {
             "clientKey": self.__captcha_api_key,
             "task": {
@@ -66,19 +66,20 @@ class RecaptchaV2Solver():
         response, http_code = await self.__make_request(
             method="POST",
             body=payload,
+            headers={},
             url=self.make_url(self.__base_api_url, self.__create_task_path)
         )
 
         if http_code == http.client.PAYMENT_REQUIRED:
-            raise RuntimeError(f"Top up your balance captcha API. \n{self.__pay_url}")
+            raise RuntimeError(f"Can`t create task. \nTop up your balance. \n{self.__pay_url}")
 
         if http_code not in (http.client.OK, http.client.CREATED):
-            raise RuntimeError(f"Bad response {http_code}")
+            raise RuntimeError(f"Can`t create task. \nBad response: {http_code}")
 
         if response["errorId"] == 0:
             return response["taskId"]
 
-        raise RuntimeError(f"Error: {response["errorDescription"]}")
+        raise RuntimeError(f"Can`t create task. \nError: {response["errorDescription"]}")
 
     async def get_captcha_token(self, task_id: str):
         payload = {
@@ -87,20 +88,24 @@ class RecaptchaV2Solver():
         }
 
         total_time = 0
-        timeout = 360
-        sleep = 5
+        timeout = 160
+        sleep = 10
+
+        print(f"Start solving captcha with task id {task_id}")
+        print(f"Process can take up to {int(timeout / 60)} minutes")
 
         while True:
             response, http_code = await self.__make_request(
                 method="POST",
                 body=payload,
+                headers={},
                 url=self.make_url(self.__base_api_url, self.__get_task_result_path)
             )
 
             if http_code != http.client.OK:
                 raise RuntimeError(f"Can`t check status. Bad response {http_code}")
 
-            if response["status"] == "ready":
+            if "status" in response and response["status"] == "ready":
                 return response["solution"]["gRecaptchaResponse"]
 
             total_time += sleep

@@ -1,11 +1,11 @@
-import asyncio
 import os
+import asyncio
 import random
 from dotenv import load_dotenv
 from aiohttp import ClientSession, TCPConnector
+from requests.exceptions import ProxyError
 from aiohttp_socks import ProxyConnector
 from faucet import MovementFaucet
-
 
 def get_user_agent() -> str:
     random_version = f"{random.uniform(520, 540):.2f}"
@@ -16,17 +16,16 @@ def get_user_agent() -> str:
 async def main():
     load_dotenv()
 
-    proxy = os.getenv('PROXY')
-    captcha_api_key = os.getenv('CAPTCHA_API_KEY')
-    site_url = os.getenv('SITE_URL')
-    site_key = os.getenv('SITE_KEY')
+    proxy = os.getenv("PROXY")
+    captcha_api_key = os.getenv("CAPTCHA_API_KEY")
+    site_url = os.getenv("SITE_URL")
+    site_key = os.getenv("SITE_KEY")
 
     address = input("Enter your address: ")
 
     session = ClientSession(
-        connector=ProxyConnector.from_url(
-            f"http://{proxy}") if proxy else TCPConnector(),
-            headers={"User-Agent": get_user_agent()}
+        connector=ProxyConnector.from_url(f"http://{proxy}") if proxy else TCPConnector(),
+        headers={"User-Agent": get_user_agent()}
     )
 
     try:
@@ -41,10 +40,11 @@ async def main():
         if await faucet.claim_move(address=address):
             print(f"Success! Check your wallet {address}")
 
+    except ProxyError as e:
+        print(f"Proxy error: {e}")
     except Exception as e:
         print(f"Something went wrong: {e}")
     finally:
         await session.close()
-
 
 asyncio.run(main())
